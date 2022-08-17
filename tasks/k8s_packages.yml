@@ -1,0 +1,77 @@
+---
+# [ k8s_generic_node - tasks/k8s_packages.yml ]
+
+# Kubernetes packages
+- block:
+  - name: Get Kubernetes latest version
+    shell: curl -sSL https://dl.k8s.io/release/stable.txt
+    register: k8s_kubernetes_latest_version
+    changed_when: no
+  
+  - set_fact:
+      k8s_kubernetes_version: "{{ k8s_kubernetes_latest_version.stdout }}"
+
+  when: k8s_kubernetes_version == ""
+  tags: [ install-k8s_packages, upgrade-k8s_packages, install-k8s_kubernetes_packages, upgrade-k8s_kubernetes_packages ]
+
+
+# Check Kubernetes packages
+- block:
+  - name: Check Kubernetes packages
+    stat: path="{{ k8s_packages_directory }}/{{ item }}"
+    register: k8s_kubernetes_binaries
+    with_items: "{{ k8s_kubernetes_packages }}"
+  
+  - set_fact:
+      k8s_kubernetes_packages_install: "{{ (k8s_kubernetes_binaries.results | map(attribute='stat') | selectattr('exists', 'eq', false) | length) != 0 }}"
+  
+  tags: [ install-k8s_packages, upgrade-k8s_packages, install-k8s_kubernetes_packages, upgrade-k8s_kubernetes_packages ]
+
+
+# Download Kubernetes packages
+- name: Download Kubernetes packages
+  get_url:
+    url: https://storage.googleapis.com/kubernetes-release/release/{{ k8s_kubernetes_version }}/bin/linux/{{ k8s_kubernetes_arch }}/{{ item }}
+    dest: "{{ k8s_packages_directory }}/{{ item }}"
+    mode: 0755
+  notify: Restart kubelet service
+  with_items: "{{ k8s_kubernetes_packages }}"
+  when: k8s_kubernetes_packages_install or ('upgrade-k8s_kubernetes_packages' in ansible_run_tags or 'upgrade-k8s_packages' in ansible_run_tags)
+  tags: [ install-k8s_packages, upgrade-k8s_packages, install-k8s_kubernetes_packages, upgrade-k8s_kubernetes_packages ]
+
+
+# ETCD client
+- block:
+  - name: Get ETCD client latest version
+    shell: curl -sSL https://github.com/etcd-io/etcd/releases/latest | grep -o 'href="/etcd-io/etcd/releases/tag/.*" ' | awk -F '/' '{ print substr($NF, 1, length($NF)-2) }'
+    register: k8s_etcd_client_latest_version
+    changed_when: no
+
+  - set_fact:
+      k8s_etcd_client_version: "{{ k8s_etcd_client_latest_version.stdout }}"
+  
+  when:
+    - "'k8s_master' in group_names"
+    - k8s_etcd_client_version == ""
+  tags: [ install-k8s_packages, upgrade-k8s_packages, install-k8s_etcd_client, upgrade-k8s_etcd_client ]
+
+# Check ETCD client binary
+- name: Check ETCD client binary
+  stat: path="{{ k8s_packages_directory }}/etcdctl"
+  register: k8s_etcd_client_binary
+  when: "'k8s_master' in group_names"
+  tags: [ install-k8s_packages, upgrade-k8s_packages, install-k8s_etcd_client, upgrade-k8s_etcd_client ]
+
+# Download ETCD client
+- name: Download ETCD client
+  unarchive:
+    src: "https://github.com/etcd-io/etcd/releases/download/{{ k8s_etcd_client_version }}/etcd-{{ k8s_etcd_client_version }}-linux-{{ k8s_kubernetes_arch }}.tar.gz"
+    dest: "{{ k8s_packages_directory }}"
+    include: "etcd-{{ k8s_etcd_client_version }}-linux-{{ k8s_kubernetes_arch }}/etcdctl"
+    extra_opts: "--strip-components=1"
+    remote_src: yes
+  when:
+    - "'k8s_master' in group_names"
+    - not k8s_etcd_client_binary.stat.exists or ('upgrade-k8s_etcd_client' in ansible_run_tags or 'upgrade-k8s_packages' in ansible_run_tags)
+  tags: [ install-k8s_packages, upgrade-k8s_packages, install-k8s_etcd_client, upgrade-k8s_etcd_client ]
+

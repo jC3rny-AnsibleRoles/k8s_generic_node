@@ -1,0 +1,45 @@
+---
+# [ k8s_generic_node - tasks/k8s_labels_and_taints.yml ]
+
+# Set up kubernetes node labels
+- name: Set Kubernetes cluster node labels
+  shell: "kubectl --kubeconfig {{ k8s_kubernetes_local_kube_config_path }} label nodes {{ hostvars[inventory_hostname].inventory_hostname_short }} {{ item.name }}={{ item.value }}"
+  with_items: "{{ k8s_kubernetes_node_labels }}"
+  changed_when: no
+  failed_when: no
+  become: no
+  delegate_to: localhost
+  when: k8s_kubernetes_node_labels != []
+  tags: [ set-k8s_node_labels ]
+
+- name: Remove Kubernetes cluster node labels
+  shell: "kubectl --kubeconfig {{ k8s_kubernetes_local_kube_config_path }} label nodes {{ hostvars[inventory_hostname].inventory_hostname_short }} {{ item.name }}-"
+  with_items: "{{ k8s_kubernetes_node_labels }}"
+  changed_when: no
+  failed_when: no
+  become: no
+  delegate_to: localhost
+  when: k8s_kubernetes_node_labels != []
+  tags: [ never, remove-k8s_node_labels ]
+
+
+# Set up Kubernetes cluster node taints
+- name: Set Kubernetes cluster node taints
+  shell: "kubectl --kubeconfig {{ k8s_kubernetes_local_kube_config_path }} taint nodes {{ hostvars[inventory_hostname].inventory_hostname_short }} {{ item.name }}={{ item.value }}:{{ item.effect }}"
+  with_items: "{{ k8s_kubernetes_node_taints }}"
+  changed_when: no
+  failed_when: no
+  become: no
+  delegate_to: localhost
+  when: k8s_kubernetes_node_taints != []
+  tags: [ set-k8s_node_taints ]
+
+- name: Remove kubernetes node taints
+  shell: "kubectl --kubeconfig {{ k8s_kubernetes_local_kube_config_path }} taint nodes {{ hostvars[inventory_hostname].inventory_hostname_short }} {{ item.name }}={{ item.value }}:{{ item.effect }}-"
+  with_items: "{{ k8s_kubernetes_node_taints }}"
+  changed_when: no
+  failed_when: no
+  become: no
+  delegate_to: localhost
+  when: k8s_kubernetes_node_taints != []
+  tags: [ never, remove-k8s_node_taints ]

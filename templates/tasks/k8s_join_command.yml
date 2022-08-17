@@ -1,0 +1,17 @@
+---
+# [ k8s_generic_node - tasks/k8s_join_command.yml ]
+
+- shell: "kubeadm token create --print-join-command --certificate-key `kubeadm init phase upload-certs --upload-certs |grep -v '^\\['`"
+  register: k8s_kubeadm_control_plane_join_command
+  changed_when: no
+  run_once: yes
+
+- shell: "kubeadm token create --print-join-command"
+  register: k8s_kubeadm_worker_join_command
+  changed_when: no
+  run_once: yes
+
+- set_fact:
+    k8s_kubernetes:
+      control_plane_join_command: "{{ k8s_kubeadm_control_plane_join_command.stdout }}"
+      worker_join_command: "{{ k8s_kubeadm_worker_join_command.stdout }}"

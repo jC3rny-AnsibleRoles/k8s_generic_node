@@ -1,0 +1,44 @@
+---
+# [ k8s_generic_node - defaults ]
+
+k8s_packages_directory: "/usr/local/bin"
+
+# Kubernetes
+k8s_kubernetes_arch: "amd64"
+k8s_kubernetes_packages: [ kubeadm, kubelet, kubectl ]
+k8s_kubernetes_version: ""
+k8s_kubernetes_tooling_version: ""
+
+
+# kubelet
+k8s_kubelet_environment: {}
+  # HTTP_PROXY: "http://example.local:8080"
+  # HTTPS_PROXY: "http://example.local:8080"
+  # NO_PROXY: "localhost,127.0.0.0/8,::1"
+  # KUBELET_EXTRA_ARGS: "--cgroup-driver=systemd --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"
+
+
+# ETCD
+k8s_etcd_client_version: ""
+
+
+k8s_cni_plugin: calico
+  # values: flannel, weave-net, calico
+
+k8s_cni_flannel_firewall_rules:
+  - { protocol: udp, port_range: 8285, purpose: flannel overlay network - udp backend }
+  - { protocol: udp, port_range: 8472, purpose: flannel overlay network - vxlan backend }
+
+k8s_cni_flannel_on_windows_firewall_rules:
+  - { protocol: udp, port_range: 4789, purpose: flannel overlay network - interoperate with flannel on windows }
+
+k8s_cni_weave_net_firewall_rules:
+  - { protocol: tcp, port_range: 6783, purpose: weave net control port }
+  - { protocol: udp, port_range: 6783-6784, purpose: weave net data ports }
+  - { protocol: tcp, port_range: 6781-6782, purpose: weave net metrics port }
+
+k8s_cni_calico_firewall_rules:
+  - { protocol: udp, port_range: 4789, purpose: calico networking with VXLAN enabled }
+
+k8s_cni_calico_backend: vxlan
+  # values: bgp, vxlan

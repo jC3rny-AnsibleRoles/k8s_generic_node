@@ -1,0 +1,106 @@
+---
+# [ k8s_generic_node - tasks ]
+
+# Install Kubernetes packages
+- name: Install Kubernetes packages
+  include_tasks:
+    file: "roles/{{ role_name }}/tasks/k8s_packages.yml"
+  tags:
+    - install-k8s_packages
+    - upgrade-k8s_packages
+    - install-k8s_kubernetes_packages
+    - upgrade-k8s_kubernetes_packages
+    - install-k8s_etcd_client
+    - upgrade-k8s_etcd_client
+
+
+# Kubernetes tooling
+- block:
+  - name: Get Kubernetes tooling latest version
+    shell: curl -sSL https://github.com/kubernetes/release/releases/latest | grep -o 'href="/kubernetes/release/releases/tag/.*" ' | awk -F '/' '{ print substr($NF, 1, length($NF)-2) }'
+    register: k8s_kubernetes_tooling_latest_version
+    changed_when: no
+
+  - set_fact:
+      k8s_kubernetes_tooling_version: "{{ k8s_kubernetes_tooling_latest_version.stdout }}"
+    
+  when: k8s_kubernetes_tooling_version == ""
+  tags: [ install-k8s_kubelet_tooling, upgrade-k8s_kubelet_tooling ]
+
+# Check kubelet tooling directory
+- name: Check kubelet tooling directory
+  file:
+    path: "/etc/systemd/system/kubelet.service.d"
+    state: directory
+    recurse: yes
+  register: k8s_kubelet_tooling_directory
+  tags: [ install-k8s_kubelet_tooling, upgrade-k8s_kubelet_tooling ]
+
+# Download Kubernetes tooling
+- name: Download Kubernetes tooling
+  unarchive:
+    src: "https://github.com/kubernetes/release/archive/refs/tags/{{ k8s_kubernetes_tooling_version }}.tar.gz"
+    dest: "{{ item.dest }}"
+    include: "release-{{ k8s_kubernetes_tooling_version | regex_replace('^v', '') }}/cmd/kubepkg/templates/latest/deb/{{ item.template }}"
+    extra_opts: "{{ item.extra_opts }}"
+    remote_src: yes
+  notify: Reload kubelet service
+  with_items:
+    - { dest: "/etc/systemd/system", template: "kubelet/lib/systemd/system/kubelet.service", extra_opts: "--strip-components=10" }
+    - { dest: "{{ k8s_kubelet_tooling_directory.path }}", template: "kubeadm/10-kubeadm.conf", extra_opts: "--strip-components=7" }
+  when: k8s_kubelet_tooling_directory.changed or 'upgrade-k8s_kubelet_tooling' in ansible_run_tags
+  tags: [ install-k8s_kubelet_tooling, upgrade-k8s_kubelet_tooling ]
+
+
+# Apply kubelet environment file template
+- name: Apply kubelet environment file template
+  template:
+    src: "default/kubelet.j2"
+    dest: "/etc/default/kubelet"
+  notify: Restart kubelet service
+  when: k8s_kubelet_environment != {}
+  tags: [ k8s_generic_node, set-k8s_kubelet_service, apply-k8s_kubelet_templates ]
+
+- meta: flush_handlers
+
+
+# Configure kubelet service
+- name: Configure kubelet service
+  lineinfile:
+    backrefs: yes
+    create: no
+    path: "{{ item }}"
+    regexp: '^(.*)/usr/bin/kubelet(.*)'
+    line: '\1{{ k8s_packages_directory }}/kubelet\2'
+  notify: Reload kubelet service
+  with_items:
+    - "/etc/systemd/system/kubelet.service"
+    - "/etc/systemd/system/kubelet.service.d/10-kubeadm.conf"
+  tags: [ k8s_generic_node, set-k8s_kubelet_service ]
+
+- meta: flush_handlers
+
+
+# Pull images used by kubeadm
+- name: Pull images used by kubeadm
+  changed_when: no
+  ignore_errors: yes
+  shell: "kubeadm config images pull"
+  when: "'k8s_master' in group_names"
+  tags: [ k8s_generic_node, run-k8s_kubeadm_pull_config_images ]
+
+
+# Notify handlers
+- name: Notify handler - Restart kubelet service
+  debug: msg="Notify handler"
+  notify: Restart kubelet service
+  changed_when: true
+  tags: [ never, notify-handlers_restart_kubelet_service, notify-handlers_role_k8s_generic_node, notify-handlers_all ]
+
+- name: Notify handler - Reload kubelet service
+  debug: msg="Notify handler"
+  notify: Reload kubelet service
+  changed_when: true
+  tags: [ never, notify-handlers_reload_kubelet_service, notify-handlers_role_k8s_generic_node, notify-handlers_all ]
+
+- meta: flush_handlers

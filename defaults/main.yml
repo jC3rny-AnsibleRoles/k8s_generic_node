@@ -1,0 +1,22 @@
+---
+# [ k8s_generic_node - defaults ]
+
+k8s_packages_directory: "/usr/local/bin"
+
+# Kubernetes
+k8s_kubernetes_arch: "amd64"
+k8s_kubernetes_packages: [ kubeadm, kubelet, kubectl ]
+k8s_kubernetes_version: ""
+k8s_kubernetes_tooling_version: ""
+
+
+# kubelet
+k8s_kubelet_environment: {}
+  # HTTP_PROXY: "http://example.local:8080"
+  # HTTPS_PROXY: "http://example.local:8080"
+  # NO_PROXY: "localhost,127.0.0.0/8,::1"
+  # KUBELET_EXTRA_ARGS: "--cgroup-driver=systemd --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"
+
+
+# ETCD
+k8s_etcd_client_version: ""

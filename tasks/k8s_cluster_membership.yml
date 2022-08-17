@@ -1,0 +1,11 @@
+---
+# [ k8s_generic_node - tasks/k8s_cluster_membership.yml ]
+
+- shell: "kubectl --kubeconfig /etc/kubernetes/admin.conf get nodes -o jsonpath='{ .items[?(@.metadata.name == \"{{ hostvars[inventory_hostname].inventory_hostname_short }}\")].metadata.name }'"
+  register: k8s_node_is_member_of_cluster
+  changed_when: no
+  failed_when: no
+  tags: [ run-k8s_kubeadm_init, check-k8s_node_membership ]
+
+- debug: msg="{{ (k8s_node_is_member_of_cluster.stdout | length > 0) | ternary(k8s_node_is_member_of_cluster.stdout, k8s_node_is_member_of_cluster.stderr) }}"
+  tags: [ never, check-k8s_node_membership ]
