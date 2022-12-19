@@ -1,0 +1,43 @@
+---
+# [ k8s_provider_id - tasks/k8s_provider_id.yml ]
+
+# Get Kubernetes node info
+- name: Get Kubernetes node info
+  command: kubectl --kubeconfig {{ k8s_kubernetes_local_kube_config_path }} get nodes {{ hostvars[inventory_hostname].inventory_hostname_short }} -o json
+  register: k8s_kubernetes_node_info
+  changed_when: no
+  failed_when: no
+  become: no
+  delegate_to: localhost
+
+
+# Get vSphere providerID
+- block:
+  - name: Get vSphere providerID
+    shell: cat /sys/class/dmi/id/product_serial | sed -e 's/^VMware-//' -e 's/-/ /' | awk '{ print toupper($1$2$3$4 "-" $5$6 "-" $7$8 "-" $9$10 "-" $11$12$13$14$15$16) }'
+    register: k8s_vsphere_provider_id
+    changed_when: no
+    become: yes
+  
+  - name: Patch Kubernetes node
+    command: kubectl --kubeconfig {{ k8s_kubernetes_local_kube_config_path }} patch node {{ hostvars[inventory_hostname].inventory_hostname_short }} -p '{"spec":{"providerID":"vsphere://{{ k8s_vsphere_provider_id.stdout }}"}}'
+    register: k8s_kubernetes_node_patch
+    changed_when: no
+    failed_when: no
+    become: no
+    delegate_to: localhost
+
+  when: (k8s_kubernetes_node_info.stdout | from_json).spec.providerID is not defined
+
+
+# Get Kubernetes node info (refresh)
+- name: Get Kubernetes node info (refresh)
+  command: kubectl --kubeconfig {{ k8s_kubernetes_local_kube_config_path }} get nodes {{ hostvars[inventory_hostname].inventory_hostname_short }} -o json
+  register: k8s_kubernetes_node_info
+  changed_when: no
+  failed_when: no
+  become: no
+  delegate_to: localhost
+
+- debug:
+    msg: "{{ (k8s_kubernetes_node_info.stdout | from_json).spec }}"
