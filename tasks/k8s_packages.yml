@@ -53,14 +53,14 @@
   when:
     - "'k8s_master' in group_names"
     - k8s_etcd_client_version == ""
-  tags: [ install-k8s_packages, upgrade-k8s_packages, install-k8s_etcd_client, upgrade-k8s_etcd_client ]
+  tags: [ install-k8s_packages, install-k8s_etcd_client, upgrade-k8s_etcd_client ]
 
 # Check ETCD client binary
 - name: Check ETCD client binary
   stat: path="{{ k8s_packages_directory }}/etcdctl"
   register: k8s_etcd_client_binary
   when: "'k8s_master' in group_names"
-  tags: [ install-k8s_packages, upgrade-k8s_packages, install-k8s_etcd_client, upgrade-k8s_etcd_client ]
+  tags: [ install-k8s_packages, install-k8s_etcd_client, upgrade-k8s_etcd_client ]
 
 # Download ETCD client
 - name: Download ETCD client
@@ -73,5 +73,4 @@
   when:
     - "'k8s_master' in group_names"
     - not k8s_etcd_client_binary.stat.exists or ('upgrade-k8s_etcd_client' in ansible_run_tags or 'upgrade-k8s_packages' in ansible_run_tags)
-  tags: [ install-k8s_packages, upgrade-k8s_packages, install-k8s_etcd_client, upgrade-k8s_etcd_client ]
-
+  tags: [ install-k8s_packages, install-k8s_etcd_client, upgrade-k8s_etcd_client ]
