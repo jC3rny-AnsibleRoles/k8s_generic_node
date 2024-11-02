@@ -7,9 +7,7 @@
     file: "roles/{{ role_name }}/tasks/k8s_packages.yml"
   tags:
     - install-k8s_packages
-    - upgrade-k8s_packages
     - install-k8s_kubernetes_packages
-    - upgrade-k8s_kubernetes_packages
     - install-k8s_etcd_client
     - upgrade-k8s_etcd_client
 

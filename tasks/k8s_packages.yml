@@ -12,7 +12,7 @@
       k8s_kubernetes_version: "{{ k8s_kubernetes_latest_version.stdout }}"
 
   when: k8s_kubernetes_version == ""
-  tags: [ install-k8s_packages, upgrade-k8s_packages, install-k8s_kubernetes_packages, upgrade-k8s_kubernetes_packages ]
+  tags: [ install-k8s_packages, install-k8s_kubernetes_packages ]
 
 
 # Check Kubernetes packages
@@ -25,7 +25,7 @@
   - set_fact:
       k8s_kubernetes_packages_install: "{{ (k8s_kubernetes_binaries.results | map(attribute='stat') | selectattr('exists', 'eq', false) | length) != 0 }}"
   
-  tags: [ install-k8s_packages, upgrade-k8s_packages, install-k8s_kubernetes_packages, upgrade-k8s_kubernetes_packages ]
+  tags: [ install-k8s_packages, install-k8s_kubernetes_packages ]
 
 
 # Download Kubernetes packages
@@ -37,7 +37,7 @@
   notify: Restart kubelet service
   with_items: "{{ k8s_kubernetes_packages }}"
   when: k8s_kubernetes_packages_install or ('upgrade-k8s_kubernetes_packages' in ansible_run_tags or 'upgrade-k8s_packages' in ansible_run_tags)
-  tags: [ install-k8s_packages, upgrade-k8s_packages, install-k8s_kubernetes_packages, upgrade-k8s_kubernetes_packages ]
+  tags: [ install-k8s_packages, install-k8s_kubernetes_packages ]
 
 
 # ETCD client
@@ -72,5 +72,5 @@
     remote_src: yes
   when:
     - "'k8s_master' in group_names"
-    - not k8s_etcd_client_binary.stat.exists or ('upgrade-k8s_etcd_client' in ansible_run_tags or 'upgrade-k8s_packages' in ansible_run_tags)
+    - not k8s_etcd_client_binary.stat.exists or ('upgrade-k8s_etcd_client' in ansible_run_tags)
   tags: [ install-k8s_packages, install-k8s_etcd_client, upgrade-k8s_etcd_client ]
